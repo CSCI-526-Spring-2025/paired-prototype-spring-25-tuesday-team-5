@@ -8,12 +8,20 @@ public class GridButtons : MonoBehaviour
 {
     public Button button;
     public TMP_Text buttonText; // Text buttonText;
-    public string playerSide;
+    // public string playerSide;
+
+    private GameController gameController;
 
     public void SetSpace()
     {
-        buttonText.text = playerSide;
+        buttonText.text = gameController.GetPlayerSide(); // playerSide;
         button.interactable = false;
+        gameController.EndTurn();
+    }
+
+    public void SetGameControllerReference(GameController controller)
+    {
+        gameController = controller;
     }
 
 }
