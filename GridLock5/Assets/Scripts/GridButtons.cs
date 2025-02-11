@@ -23,5 +23,8 @@ public class GridButtons : MonoBehaviour
     {
         gameController = controller;
     }
+    public void BlockGrid(){
+        button.GetComponent<Image>().color=new Color(0,0,0,1);
+    }
 
 }
