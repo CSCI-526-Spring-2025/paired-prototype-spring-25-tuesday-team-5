@@ -6,6 +6,7 @@ using TMPro;
 using UnityEngine.SocialPlatforms.Impl;
 using System.Drawing;
 using System;
+using UnityEngine.SceneManagement;
 
 public class GameController : MonoBehaviour
 {
@@ -16,6 +17,7 @@ public class GameController : MonoBehaviour
     public GameObject playerPrefab;
     public Transform playerContainer;
 
+    public PanelVisual panel;
     public static GameController Instance { get; private set; }
     public int BOARD_WIDTH = 7;
     public int BOARD_HEIGHT = 5;
@@ -23,6 +25,7 @@ public class GameController : MonoBehaviour
     public static readonly char[] playerCharacters = new char[4] { 'X', 'O', 'A', 'B'};
 
     private int turn = 0;
+    private int step = 0;
     private TileVisual[,] tiles;
     private PlayerVisual[] players;
     private void Awake()
@@ -58,7 +61,39 @@ public class GameController : MonoBehaviour
         FindLargestConnectedComponent();
         
         turn++;
+        step++;
         turn %= PLAYER_SIZE;
+
+        if (step== BOARD_HEIGHT * BOARD_WIDTH)
+        {
+            EndGame();
+        }
+    }
+    private void EndGame()
+    {
+        int maxScoreIndex = -1;
+        int maxScore = 0;
+        bool gameDrawFlag = true;
+        for (int i = 1; i < PLAYER_SIZE; i++)
+            if (players[i].score != players[i - 1].score)
+            {
+                gameDrawFlag = false;
+                break;
+            }
+        if (gameDrawFlag)
+        {
+            panel.Show("Game Draw!");
+        }
+        else
+        {
+            for (int i = 0; i < PLAYER_SIZE; i++)
+                if (maxScore < players[i].score)
+                {
+                    maxScore = players[i].score;
+                    maxScoreIndex = i;
+                }
+            panel.Show(players[maxScoreIndex].character.ToString() + " Won!");
+        }
     }
     private int currentNumber = 0;
     private int currentMaxNumber = 0;
@@ -137,6 +172,13 @@ public class GameController : MonoBehaviour
                 tiles[p.x, p.y].SetExit(dir.ToArray());
                 tiles[p.x, p.y].Use();
             }
+        }
+    }
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.R))
+        {
+            SceneManager.LoadScene("Game");
         }
     }
 }
