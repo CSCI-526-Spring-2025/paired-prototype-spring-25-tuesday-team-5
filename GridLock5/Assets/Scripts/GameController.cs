@@ -3,163 +3,140 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.SocialPlatforms.Impl;
+using System.Drawing;
+using System;
 
 public class GameController : MonoBehaviour
 {
-    public TMP_Text[] buttonList; // Text array for the 5x5 grid buttons
-    private string playerSide;
-    private bool[,] blockedGrid; // Grid to track blocked positions
-    private int playerXScore, playerOScore;
-    private int moveCount;
 
-    public GameObject gameOverPanel;
-    public TMP_Text gameOverText;
-    public TMP_Text playerXScoreText, playerOScoreText;
+    public GameObject tilePrefab;
+    public Transform tileContainer;
 
-    private const int gridSize = 5; // 5x5 Grid
+    public GameObject playerPrefab;
+    public Transform playerContainer;
 
-    void Awake()
+    public static GameController Instance { get; private set; }
+    public int BOARD_WIDTH = 7;
+    public int BOARD_HEIGHT = 5;
+    public int PLAYER_SIZE = 4;
+    public static readonly char[] playerCharacters = new char[4] { 'X', 'O', 'A', 'B'};
+
+    private int turn = 0;
+    private TileVisual[,] tiles;
+    private PlayerVisual[] players;
+    private void Awake()
     {
-        gameOverPanel.SetActive(false);
-        blockedGrid = new bool[gridSize, gridSize];
-        SetGameControllerReferenceOnButtons();
-        playerSide = "X";
-        moveCount = 0;
-        playerXScore = 0;
-        playerOScore = 0;
+        Instance = this;
     }
-
-    void SetGameControllerReferenceOnButtons()
+    private void Start()
     {
-        for (int i = 0; i < buttonList.Length; i++)
-        {
-            buttonList[i].GetComponentInParent<GridButtons>().SetGameControllerReference(this);
-        }
-    }
+        tiles =new TileVisual[BOARD_HEIGHT, BOARD_WIDTH];
+        players = new PlayerVisual[PLAYER_SIZE];
+        visit = new bool[BOARD_HEIGHT, BOARD_WIDTH];
+        directions = new int[BOARD_HEIGHT, BOARD_WIDTH];
 
-    public string GetPlayerSide()
-    {
-        return playerSide;
-    }
-
-    public void EndTurn()
-    {
-        moveCount++;
-
-        int score = CalculateScore();
-        if (playerSide == "X")
-            playerXScore += score;
-        else
-            playerOScore += score;
-
-        UpdateScoreUI();
-
-        // Check if all cells are blocked or filled
-        if (moveCount >= gridSize * gridSize || AreAllCellsBlocked())
-        {
-            DeclareWinner();
-            return;
-        }
-
-        ChangeSides();
-    }
-
-    private int CalculateScore()
-    {
-        int totalScore = 0;
-        int[,] directions = { { 0, 1 }, { 1, 0 }, { 1, 1 }, { 1, -1 } }; // Right, Down, Diagonal Right, Diagonal Left
-
-        for (int r = 0; r < gridSize; r++)
-        {
-            for (int c = 0; c < gridSize; c++)
+        tileContainer.GetComponent<RectTransform>().sizeDelta = new Vector2(BOARD_WIDTH * 100, BOARD_HEIGHT * 100);
+        //Instantiate tiles
+        for (int i = 0; i < BOARD_HEIGHT; i++)
+            for (int j = 0; j < BOARD_WIDTH; j++)
             {
-                if (buttonList[r * gridSize + c].text == playerSide && !blockedGrid[r, c])
+                tiles[i, j] = Instantiate(tilePrefab, tileContainer).GetComponent<TileVisual>();
+                tiles[i, j].Init(i, j);
+            }
+        //Instantiate players;
+        for (int i = 0; i < PLAYER_SIZE; i++)
+        {
+            players[i] = Instantiate(playerPrefab, playerContainer).GetComponent<PlayerVisual>();
+            players[i].Init(i, playerCharacters[i]);
+        }
+    }
+    public void Play(TileVisual tileVisual)
+    {
+        tileVisual.text.text = players[turn].character.ToString();
+        tileVisual.player = turn;
+        FindLargestConnectedComponent();
+        
+        turn++;
+        turn %= PLAYER_SIZE;
+    }
+    private int currentNumber = 0;
+    private int currentMaxNumber = 0;
+    private bool[,] visit;
+    private static readonly int[] dx = new int[4] { -1, 0, 1, 0 };
+    private static readonly int[] dy = new int[4] { 0, -1, 0, 1 };
+    private int[,] directions;
+
+    private List<Vector2Int> maxConnectedTiles = new List<Vector2Int>();
+    private List<Vector2Int> tempList = new List<Vector2Int>();
+
+    private void DFS(int x, int y)
+    {
+        if (x < 0 || x >= BOARD_HEIGHT || y < 0 || y >= BOARD_WIDTH)
+            return;
+        if (tiles[x, y].player != turn || visit[x, y])
+            return;
+
+        visit[x, y] = true;
+        currentNumber++;
+        tempList.Add(new Vector2Int(x, y));
+
+        for (int i = 0; i < 4; i++)
+        {
+            int newX = x + dx[i];
+            int newY = y + dy[i];
+
+            if (newX >= 0 && newX < BOARD_HEIGHT && newY >= 0 && newY < BOARD_WIDTH &&
+                tiles[newX, newY].player == turn && !visit[newX, newY])
+            {
+                directions[x, y] |= (1 << i);  
+                directions[newX, newY] |= (1 << ((i + 2) % 4)); 
+                DFS(newX, newY);
+            }
+        }
+    }
+
+    public void FindLargestConnectedComponent()
+    {
+        Array.Clear(visit, 0, visit.Length);
+        Array.Clear(directions, 0, directions.Length);  
+        maxConnectedTiles.Clear();
+        currentMaxNumber = 0;
+
+        for (int x = 0; x < BOARD_HEIGHT; x++)
+        {
+            for (int y = 0; y < BOARD_WIDTH; y++)
+            {
+                if (!visit[x, y] && tiles[x, y].player == turn)
                 {
-                    for(int i=0;i<4;i++)
+                    currentNumber = 0;
+                    tempList.Clear();
+                    DFS(x, y);
+
+                    if (currentNumber > currentMaxNumber)
                     {
-                        int count = CountSequence(r, c, directions[i,0], directions[i,1]);
-                        if (count >= 3)
-                        {
-                            totalScore += GetScoreForSequence(count);
-                            BlockCells(r, c, directions[i,0], directions[i,1], count);
-                        }
+                        currentMaxNumber = currentNumber;
+                        maxConnectedTiles = new List<Vector2Int>(tempList);
                     }
                 }
             }
         }
-        return totalScore;
-    }
-
-    private int CountSequence(int r, int c, int dr, int dc)
-    {
-        int count = 0;
-        while (r >= 0 && r < gridSize && c >= 0 && c < gridSize &&
-               buttonList[r * gridSize + c].text == playerSide && !blockedGrid[r, c])
+        if (currentMaxNumber >= 3)
         {
-            count++;
-            r += dr;
-            c += dc;
-        }
-        return count;
-    }
-
-    private int GetScoreForSequence(int count)
-    {
-        if (count < 3) return 0;
-        int score = 3; // Base score for 3 blocks
-        for (int i = 4; i <= count; i++)
-        {
-            score += 2; // Each extra block adds +2
-        }
-        return score;
-    }
-
-    private void BlockCells(int r, int c, int dr, int dc, int count)
-    {
-        for (int i = 0; i < count; i++)
-        {
-
-            buttonList[r*5+c].transform.parent.GetComponent<Image>().color=Color.black;
-            blockedGrid[r, c] = true;
-            r += dr;
-            c += dc;
-        }
-    }
-
-    private bool AreAllCellsBlocked()
-    {
-        for (int r = 0; r < gridSize; r++)
-        {
-            for (int c = 0; c < gridSize; c++)
+            players[turn].UpdateScore(3 + (currentMaxNumber - 3) * 2);
+            foreach (var p in maxConnectedTiles)
             {
-                if (!blockedGrid[r, c] && string.IsNullOrEmpty(buttonList[r * gridSize + c].text))
+                List<int> dir = new List<int>();
+                for (int i = 0; i < 4; i++)
                 {
-                    return false; // At least one cell is playable
+                    if ((directions[p.x, p.y] & (1 << i)) != 0)
+                    {
+                        dir.Add(i);
+                    }
                 }
+                tiles[p.x, p.y].SetExit(dir.ToArray());
+                tiles[p.x, p.y].Use();
             }
         }
-        return true;
-    }
-
-    private void DeclareWinner()
-    {
-        gameOverPanel.SetActive(true);
-        if (playerXScore > playerOScore)
-            gameOverText.text = "Player X Wins! Score: " + playerXScore;
-        else if (playerOScore > playerXScore)
-            gameOverText.text = "Player O Wins! Score: " + playerOScore;
-        else
-            gameOverText.text = "It's a Draw!";
-    }
-
-    private void UpdateScoreUI()
-    {
-        playerXScoreText.text = "Player X: " + playerXScore;
-        playerOScoreText.text = "Player O: " + playerOScore;
-    }
-
-    void ChangeSides()
-    {
-        playerSide = (playerSide == "X") ? "O" : "X";
     }
 }
