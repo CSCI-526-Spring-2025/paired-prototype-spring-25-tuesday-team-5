@@ -6,6 +6,7 @@ using UnityEngine;
 public class PlayerVisual : MonoBehaviour
 {
     public TMP_Text outlineText;
+    public TMP_Text nameText;
     public TMP_Text scoreText;
     [HideInInspector] public int ID = 0;
     [HideInInspector] public int score = 0;
@@ -44,6 +45,7 @@ public class PlayerVisual : MonoBehaviour
         outlineText.text = outline;
         //Init score.
         scoreText.text = "Score: " + score;
+        nameText.text = character.ToString();
     }
 
     public void UpdateScore(int score)

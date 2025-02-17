@@ -47,6 +47,6 @@ public class TileVisual : MonoBehaviour
     public void Use()
     {
         player = -1;
-        backgroundImage.color = Color.black;
+        backgroundImage.color = new Color(255 / 255f, 170 / 255f, 175 / 255f);
     }
 }

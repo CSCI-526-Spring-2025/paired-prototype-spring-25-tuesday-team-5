@@ -19,9 +19,10 @@ public class GameController : MonoBehaviour
 
     public PanelVisual panel;
     public static GameController Instance { get; private set; }
-    public int BOARD_WIDTH = 7;
-    public int BOARD_HEIGHT = 5;
-    public int PLAYER_SIZE = 4;
+    public int BOARD_WIDTH = 4;
+    public int BOARD_HEIGHT = 4;
+    public int PLAYER_SIZE = 2;
+    public int IN_A_ROW = 3;
     public static readonly char[] playerCharacters = new char[4] { 'X', 'O', 'A', 'B'};
 
     private int turn = 0;
@@ -32,7 +33,7 @@ public class GameController : MonoBehaviour
     {
         Instance = this;
     }
-    private void Start()
+    public void Init()
     {
         tiles =new TileVisual[BOARD_HEIGHT, BOARD_WIDTH];
         players = new PlayerVisual[PLAYER_SIZE];
@@ -156,9 +157,9 @@ public class GameController : MonoBehaviour
                 }
             }
         }
-        if (currentMaxNumber >= 3)
+        if (currentMaxNumber >= IN_A_ROW) 
         {
-            players[turn].UpdateScore(3 + (currentMaxNumber - 3) * 2);
+            players[turn].UpdateScore(IN_A_ROW + (currentMaxNumber - IN_A_ROW) * (IN_A_ROW - 1));
             foreach (var p in maxConnectedTiles)
             {
                 List<int> dir = new List<int>();
