@@ -65,15 +65,16 @@ public class GameController : MonoBehaviour
         step++;
         turn %= PLAYER_SIZE;
 
-        if (step== BOARD_HEIGHT * BOARD_WIDTH)
+        if (step == BOARD_HEIGHT * BOARD_WIDTH) 
         {
             EndGame();
         }
     }
     private void EndGame()
     {
-        int maxScoreIndex = -1;
+        
         int maxScore = 0;
+        List<char> characters = new List<char>();
         bool gameDrawFlag = true;
         for (int i = 1; i < PLAYER_SIZE; i++)
             if (players[i].score != players[i - 1].score)
@@ -87,13 +88,14 @@ public class GameController : MonoBehaviour
         }
         else
         {
+            string str = "";
             for (int i = 0; i < PLAYER_SIZE; i++)
                 if (maxScore < players[i].score)
-                {
                     maxScore = players[i].score;
-                    maxScoreIndex = i;
-                }
-            panel.Show(players[maxScoreIndex].character.ToString() + " Won!");
+            for (int i = 0; i < PLAYER_SIZE; i++)
+                if (maxScore == players[i].score)
+                    str += players[i].character + " ";
+            panel.Show(str + "Win!");
         }
     }
     private int currentNumber = 0;
